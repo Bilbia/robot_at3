@@ -7,7 +7,7 @@ import math
 from matplotlib import pyplot as plt
 import time
 
-cap = cv2.VideoCapture("/Users/sophiakerber/Downloads/VID_20200302_063554327.mp4")
+cap = cv2.VideoCapture("video1.mp4")
 cap.set(cv2.CAP_PROP_FRAME_WIDTH, 640)
 cap.set(cv2.CAP_PROP_FRAME_HEIGHT, 480)
 
@@ -68,7 +68,10 @@ while(True):
             lista_h.append(h)
             lista_m.append(m)
 
-            cv2.line(frame,(x1,y1),(x2,y2),(0,0,255),4)
+            if m>0.3 and m<2:
+                cv2.line(frame,(x1,y1), (x2,y2), (50,0,255),2) 
+            elif m<-0.3 and m>-2:
+                cv2.line(frame,(x1,y1), (x2,y2), (50,0,255),2) 
 
     if len(lista_m) > 1 and lista_m[0] != lista_m[1]:
         x_i = (lista_h[1] - lista_h[0])/(lista_m[0] - lista_m[1])
