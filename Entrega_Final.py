@@ -1,66 +1,149 @@
+#!/usr/bin/python
+# -*- coding: utf-8 -*-
+
 import cv2
 import numpy as np
 import math
-import auxiliar as aux
+from matplotlib import pyplot as plt
+import time
 
-video1 = cv2.VideoCapture("video1.mp4")
+cap = cv2.VideoCapture("video1.mp4")
+cap.set(cv2.CAP_PROP_FRAME_WIDTH, 640)
+cap.set(cv2.CAP_PROP_FRAME_HEIGHT, 480)
+
+lower = 0
+upper = 1
+
+white_1_hsv = np.array([0, 0, 78], dtype=np.uint8)
+white1 = np.array([200, 200, 200], dtype=np.uint8)
+white_2_hsv = np.array([0, 0, 100], dtype=np.uint8)
+white2 = np.array([255, 255, 255], dtype=np.uint8)
 
 while(True):
-    # Capture frame-by-frame
-    ret, frame = video1.read()
+#     # Capture frame-by-frame
+    
+    ret, frame = cap.read()
+    mask_white = cv2.inRange(frame, white1, white2)
+
     
     if ret == False:
         print("Codigo de retorno FALSO - problema para capturar o frame")
 
-    # Our operations on the frame come here
-    rgb = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB) 
-    gray = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
-    hsv = cv2.cvtColor(frame, cv2.COLOR_BGR2HSV)
-    white = "#eb4034"
-    white_1, white_2 = aux.ranges(white)
-    mask_white = cv2.inRange(rgb, white_1, white_2)
-    edges = cv2.Canny(gray,50,150,apertureSize = 3) 
-    lines = cv2.HoughLines(edges,1,np.pi/180, 200) 
-    
-    for r,theta in lines[0]: 
-        # Stores the value of cos(theta) in a 
-        a = np.cos(theta) 
-      
-        # Stores the value of sin(theta) in b 
-        b = np.sin(theta) 
-          
-        # x0 stores the value rcos(theta) 
-        x0 = a*r 
-          
-        # y0 stores the value rsin(theta) 
-        y0 = b*r 
-          
-        # x1 stores the rounded off value of (rcos(theta)-1000sin(theta)) 
-        x1 = int(x0 + 1000*(-b)) 
-          
-        # y1 stores the rounded off value of (rsin(theta)+1000cos(theta)) 
-        y1 = int(y0 + 1000*(a)) 
-      
-        # x2 stores the rounded off value of (rcos(theta)+1000sin(theta)) 
-        x2 = int(x0 - 1000*(-b)) 
-          
-        # y2 stores the rounded off value of (rsin(theta)-1000cos(theta)) 
-        y2 = int(y0 - 1000*(a)) 
-          
-        # cv2.line draws a line in img from the point(x1,y1) to (x2,y2). 
-        # (0,0,255) denotes the colour of the line to be  
-        #drawn. In this case, it is red.  
-        cv2.line(gray,(x1,y1), (x2,y2), (0,0,255),2) 
-          
-    
-    # Display the resulting frame
-    # cv2.imshow('frame',frame)
-    cv2.imshow('hsv', gray)
+    blur = cv2.GaussianBlur(mask_white, (5,5),0)
 
+    edges = cv2.Canny(blur,50,150)
+    
+    lines = cv2.HoughLines(edges,1,np.pi/180, 150)
+
+    lista_m = []
+    lista_h = []
+
+    linhas_d_m = []
+    linhas_d_x1 = []
+    linhas_d_x2 = []
+    linhas_d_y1 = []
+    linhas_d_y2 = []
+    linhas_d_h = []
+
+    linhas_e_m = []
+    linhas_e_x1 = []
+    linhas_e_x2 = []
+    linhas_e_y1 = []
+    linhas_e_y2 = []
+    linhas_e_h = []
+
+    xis = []
+    yis = []
+
+    for x in range(0, len(lines)):    
+        for rho, theta in lines[x]:
+            a = np.cos(theta)
+            b = np.sin(theta)
+            x0 = a*rho
+            y0 = b*rho
+            x1 = int(x0 + 1000*(-b))
+            y1 = int(y0 + 1000*(a))
+            x2 = int(x0 - 1000*(-b))
+            y2 = int(y0 - 1000*(a))
+            m = (y2 - y1)/(x2 - x1)
+            
+            h = y1 - m*x1
+
+            lista_h.append(h)
+            lista_m.append(m)
+
+            #direita
+            if m>0.3 and m<2:
+                linhas_d_m.append(m)
+                linhas_d_x1.append(x1)
+                linhas_d_x2.append(x2)
+                linhas_d_y1.append(y1)
+                linhas_d_y2.append(y2)
+                linhas_d_h.append(h)
+
+
+            #esquerda
+            elif m<-0.2 and m>-2:
+                linhas_e_m.append(m)
+                linhas_e_x1.append(x1)
+                linhas_e_x2.append(x2)
+                linhas_e_y1.append(y1)
+                linhas_e_y2.append(y2)
+                linhas_e_h.append(h)
+            
+            else:
+                lista_m.remove(m) 
+                lista_h.remove(h)
+
+
+            
+        
+    if len(lista_m) > 1 and lista_m[0] != lista_m[1]:
+        x_i = (lista_h[1] - lista_h[0])/(lista_m[0] - lista_m[1])
+        y_i = lista_m[0] * x_i + lista_h[0]
+        x_i = int(x_i)
+        y_i = int(y_i)
+        xis.append(x_i)
+        yis.append(y_i)
+
+ 
+    x1 = 0
+    x2 = 0
+    x3 = 0
+    x4 = 0
+    y1 = 0
+    y2 = 0
+    y3 = 0
+    y4 = 0
+    
+    #linha direita
+    if len(linhas_d_m)>1:
+                x1 = int(np.mean(linhas_d_x1))
+                x2 = int(np.mean(linhas_d_x2))
+                y1 = int(np.mean(linhas_d_y1))
+                y2 = int(np.mean(linhas_d_y2))
+                cv2.line(frame,(x1,y1), (x2,y2), (50,0,255),2) 
+    
+    #linha esquerda
+    if len(linhas_e_m)>1:
+                x3 = int(np.mean(linhas_e_x1))
+                x4 = int(np.mean(linhas_e_x2))
+                y3 = int(np.mean(linhas_e_y1))
+                y4 = int(np.mean(linhas_e_y2))
+                cv2.line(frame,(x3,y3), (x4,y4), (50,0,255),2) 
+
+    #ponto de intersecção
+    if x1!=0 and x2!=0 and x3!=0 and x4!=0:
+        px = int(((x1*y2 - y1*x2)*(x3-x4) - (x1-x2)*(x3*y4 - y3*x4))/((x1-x2)*(y3-y4) - (y1-y2)*(x3-x4)))
+        py = int(((x1*y2 - y1*x2)*(y3-y4) - (y1-y2)*(x3*y4-x4*y3))/((x1-x2)*(y3-y4)-(y1-y2)*(x3-x4)))
+        cv2.circle(frame, (px, py), 1, (0,255,0), 5)
+
+    cv2.imshow("Vídeo", frame)
+
+    # ver posicao 0, colocar em variavel, acessar variavel
     if cv2.waitKey(1) & 0xFF == ord('q'):
         break
 
-# When everything done, release the capture
-video1.release()
-cv2.destroyAllWindows()
+
+
 
