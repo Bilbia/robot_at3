@@ -143,3 +143,7 @@ while(True):
     # ver posicao 0, colocar em variavel, acessar variavel
     if cv2.waitKey(1) & 0xFF == ord('q'):
         break
+
+
+
+
